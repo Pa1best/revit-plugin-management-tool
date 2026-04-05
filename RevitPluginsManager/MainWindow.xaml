@@ -132,7 +132,7 @@
             <TextBlock
                 FontSize="12"
                 Opacity="0.85"
-                Text="Restart Revit for changes to take effect. Add-ins are loaded from your roaming profile folder."
+                Text="Disabling an add-in usually requires restarting Revit to unload it. Re-enabling refreshes the manifest so an open session can load the add-in. Add-ins are read from your roaming profile folder."
                 TextWrapping="Wrap" />
         </Border>
     </Grid>

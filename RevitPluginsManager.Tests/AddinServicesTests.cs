@@ -13,7 +13,8 @@ public sealed class AddinServicesTests
         try
         {
             var path = Path.Combine(dir, "Test.addin");
-            File.WriteAllText(path, "<RevitAddIns />");
+            const string manifestXml = "<RevitAddIns />";
+            File.WriteAllText(path, manifestXml);
 
             var svc = new AddinToggleService();
             var disabled = svc.SetEnabled(path, false);
@@ -25,6 +26,7 @@ public sealed class AddinServicesTests
             Assert.Equal(Path.Combine(dir, "Test.addin"), enabled);
             Assert.True(File.Exists(enabled));
             Assert.False(File.Exists(disabled));
+            Assert.Equal(manifestXml, File.ReadAllText(enabled));
         }
         finally
         {

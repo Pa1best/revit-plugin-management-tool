@@ -8,6 +8,7 @@ public sealed class AddinToggleService
 
     /// <summary>
     /// Enable or disable by renaming between *.addin and *.addin.disabled.
+    /// Enabling copies the disabled manifest to temp, renames it there, then copies the result into the add-ins folder so Revit sees a new file.
     /// </summary>
     /// <returns>New full path of the manifest file.</returns>
     public string SetEnabled(string currentPath, bool enable)
@@ -43,8 +44,32 @@ public sealed class AddinToggleService
             if (File.Exists(dest))
                 throw new IOException($"Cannot enable: a file already exists: {dest}");
 
-            File.Move(currentPath, dest);
-            return dest;
+            var tempDir = Path.Combine(Path.GetTempPath(), "RevitPluginsManager_" + Guid.NewGuid().ToString("N"));
+            Directory.CreateDirectory(tempDir);
+            try
+            {
+                var tempDisabled = Path.Combine(tempDir, fileName);
+                File.Copy(currentPath, tempDisabled, overwrite: false);
+
+                var tempEnabled = Path.Combine(tempDir, newName);
+                File.Move(tempDisabled, tempEnabled);
+
+                File.Copy(tempEnabled, dest, overwrite: false);
+                File.Delete(currentPath);
+                return dest;
+            }
+            finally
+            {
+                try
+                {
+                    if (Directory.Exists(tempDir))
+                        Directory.Delete(tempDir, recursive: true);
+                }
+                catch
+                {
+                    // ignored
+                }
+            }
         }
 
         if (isDisabledFile)
