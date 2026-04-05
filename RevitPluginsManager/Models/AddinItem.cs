@@ -1,7 +1,7 @@
 namespace RevitPluginsManager.Models;
 
 /// <summary>
-/// Snapshot of one manifest on disk (either *.addin or *.addin.disabled).
+/// Snapshot of one manifest on disk under the year folder (enabled) or under <c>.disabled\{year}\</c> (disabled).
 /// </summary>
 public sealed class AddinItem
 {

@@ -1,6 +1,6 @@
 # RevitPluginsManager
 
-Desktop utility for **Windows** to list Autodesk Revit add-in manifests (`.addin`) from your user profile and **enable or disable** them by renaming files (`*.addin` ↔ `*.addin.disabled`). The UI is built with **WPF** and **[WPF-UI](https://github.com/lepoco/wpfui)** (Fluent Design).
+Desktop utility for **Windows** to list Autodesk Revit add-in manifests (`.addin`) from your roaming profile and **enable or disable** them by moving files between the per-version Addins folder and a **`.disabled\<year>\`** folder (filenames stay `*.addin`). The UI is built with **WPF** and **[WPF-UI](https://github.com/lepoco/wpfui)** (Fluent Design).
 
 **Not affiliated with Autodesk.** Revit is a trademark of Autodesk, Inc.
 
@@ -11,10 +11,12 @@ Desktop utility for **Windows** to list Autodesk Revit add-in manifests (`.addin
 
 ## How it works
 
-- Reads manifests under `%AppData%\Autodesk\Revit\Addins\<year>\` (one folder per Revit version, e.g. `2025`).
-- **Enabled:** `*.addin`
-- **Disabled:** `*.addin.disabled` (Revit does not load these)
-- Restart Revit after changes so manifests are picked up.
+- Reads manifests under `%AppData%\Autodesk\Revit\Addins\<year>\` (enabled) and `%AppData%\Autodesk\Revit\Addins\.disabled\<year>\` (disabled). The app resolves `%AppData%` via the Windows API (`Environment.SpecialFolder.ApplicationData`), not a hard-coded user path.
+- **Enabled:** `<year>\*.addin` (Revit’s normal search path)
+- **Disabled:** `.disabled\<year>\*.addin` (outside Revit’s default search, so those manifests are not loaded)
+- Restart Revit after changes if a session already loaded an add-in you disabled.
+
+Older releases used `*.addin.disabled` next to enabled manifests. Those are no longer listed; rename each to `*.addin` and move it into `.disabled\<year>\` if you still need them as disabled.
 
 ## Build
 

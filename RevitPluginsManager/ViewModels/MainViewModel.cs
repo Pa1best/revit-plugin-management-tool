@@ -6,12 +6,18 @@ namespace RevitPluginsManager.ViewModels;
 
 public partial class MainViewModel : ObservableObject
 {
-    private readonly RevitAddinScanner _scanner = new();
-    private readonly AddinToggleService _toggleService = new();
+    private readonly RevitAddinScanner _scanner;
+    private readonly AddinToggleService _toggleService;
+
+    public MainViewModel()
+    {
+        _scanner = new RevitAddinScanner();
+        _toggleService = new AddinToggleService(_scanner.RootPath);
+    }
 
     public ObservableCollection<VersionGroupViewModel> VersionGroups { get; } = new();
 
-    public string AddinsRootPath => RevitAddinScanner.GetAddinsRootPath();
+    public string AddinsRootPath => _scanner.RootPath;
 
     public bool HasVersionGroups => VersionGroups.Count > 0;
 

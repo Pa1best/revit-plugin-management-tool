@@ -8,6 +8,9 @@ public sealed class RevitAddinScanner
 {
     private static readonly Regex YearFolder = new(@"^\d{4}$", RegexOptions.Compiled);
 
+    /// <summary>Folder under the Revit Addins root where disabled manifests are stored, by year.</summary>
+    public const string DisabledFolderName = ".disabled";
+
     private readonly string _root;
 
     /// <param name="addinsRootOverride">For tests; default is roaming Autodesk Revit Addins folder.</param>
@@ -27,54 +30,68 @@ public sealed class RevitAddinScanner
             "Addins");
     }
 
-    /// <summary>Returns year folder names (e.g. 2025), sorted descending.</summary>
+    /// <summary>Returns year folder names (e.g. 2025), sorted descending — from active Addins and from <see cref="DisabledFolderName"/>.</summary>
     public IReadOnlyList<string> GetRevitVersions()
     {
         if (!Directory.Exists(_root))
             return [];
 
-        return Directory
-            .EnumerateDirectories(_root)
-            .Select(Path.GetFileName)
-            .Where(name => name is not null && YearFolder.IsMatch(name))
-            .Cast<string>()
-            .OrderDescending(StringComparer.Ordinal)
-            .ToList();
+        var set = new HashSet<string>(StringComparer.Ordinal);
+        foreach (var name in Directory.EnumerateDirectories(_root).Select(Path.GetFileName))
+        {
+            if (name is not null && YearFolder.IsMatch(name))
+                set.Add(name);
+        }
+
+        var disabledRoot = Path.Combine(_root, DisabledFolderName);
+        if (Directory.Exists(disabledRoot))
+        {
+            foreach (var name in Directory.EnumerateDirectories(disabledRoot).Select(Path.GetFileName))
+            {
+                if (name is not null && YearFolder.IsMatch(name))
+                    set.Add(name);
+            }
+        }
+
+        return set.OrderDescending(StringComparer.Ordinal).ToList();
     }
 
     public IReadOnlyList<AddinItem> GetAddinsForVersion(string version)
     {
-        var folder = Path.Combine(_root, version);
-        if (!Directory.Exists(folder))
-            return [];
-
         var list = new List<AddinItem>();
 
-        foreach (var path in Directory.EnumerateFiles(folder, "*.addin", SearchOption.TopDirectoryOnly))
+        var folder = Path.Combine(_root, version);
+        if (Directory.Exists(folder))
         {
-            var name = Path.GetFileName(path);
-            list.Add(
-                new AddinItem
-                {
-                    Version = version,
-                    DisplayFileName = name,
-                    FullPath = path,
-                    IsEnabled = true,
-                });
+            foreach (var path in Directory.EnumerateFiles(folder, "*.addin", SearchOption.TopDirectoryOnly))
+            {
+                var name = Path.GetFileName(path);
+                list.Add(
+                    new AddinItem
+                    {
+                        Version = version,
+                        DisplayFileName = name,
+                        FullPath = path,
+                        IsEnabled = true,
+                    });
+            }
         }
 
-        foreach (var path in Directory.EnumerateFiles(folder, "*.addin.disabled", SearchOption.TopDirectoryOnly))
+        var disabledFolder = Path.Combine(_root, DisabledFolderName, version);
+        if (Directory.Exists(disabledFolder))
         {
-            var fileName = Path.GetFileName(path);
-            var display = fileName[..^".disabled".Length];
-            list.Add(
-                new AddinItem
-                {
-                    Version = version,
-                    DisplayFileName = display,
-                    FullPath = path,
-                    IsEnabled = false,
-                });
+            foreach (var path in Directory.EnumerateFiles(disabledFolder, "*.addin", SearchOption.TopDirectoryOnly))
+            {
+                var name = Path.GetFileName(path);
+                list.Add(
+                    new AddinItem
+                    {
+                        Version = version,
+                        DisplayFileName = name,
+                        FullPath = path,
+                        IsEnabled = false,
+                    });
+            }
         }
 
         return list.OrderBy(a => a.DisplayFileName, StringComparer.OrdinalIgnoreCase).ToList();
