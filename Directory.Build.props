@@ -1,0 +1,9 @@
+<Project>
+  <PropertyGroup>
+    <Authors>Alex Slutski</Authors>
+    <Copyright>Copyright (c) 2026 Alex Slutski</Copyright>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
+    <RepositoryType>git</RepositoryType>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+</Project>

@@ -1,0 +1,4 @@
+<Solution>
+  <Project Path="RevitPluginsManager/RevitPluginsManager.csproj" />
+  <Project Path="RevitPluginsManager.Tests/RevitPluginsManager.Tests.csproj" />
+</Solution>
