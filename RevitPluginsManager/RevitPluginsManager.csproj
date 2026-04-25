@@ -6,6 +6,7 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <UseWPF>true</UseWPF>
     <ApplicationIcon>Assets\Designer.ico</ApplicationIcon>
+    <ApplicationManifest>app.manifest</ApplicationManifest>
     <AssemblyTitle>Revit Add-ins Manager</AssemblyTitle>
     <Description>Manage Revit .addin manifests from the roaming Addins folder (enable/disable by rename).</Description>
     <Product>RevitPluginsManager</Product>

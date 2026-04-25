@@ -17,6 +17,9 @@
     WindowCornerPreference="Round"
     WindowStartupLocation="CenterScreen"
     mc:Ignorable="d">
+    <ui:FluentWindow.Resources>
+        <BooleanToVisibilityConverter x:Key="BoolToVisibility" />
+    </ui:FluentWindow.Resources>
     <!-- Transparent root so DWM backdrop (Mica / wallpaper blur) is visible on Windows 11 -->
     <Grid Background="Transparent">
         <Grid.RowDefinitions>
@@ -33,19 +36,48 @@
             ShowClose="True" />
 
         <Grid Grid.Row="1" Margin="16,8,16,8">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="*" />
+            </Grid.RowDefinitions>
+
+            <Grid Grid.Row="0" Margin="0,0,0,12">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+                <TextBlock
+                    Grid.Column="0"
+                    VerticalAlignment="Center"
+                    FontWeight="SemiBold"
+                    Text="Add-ins (per Revit version)" />
+                <StackPanel
+                    Grid.Column="1"
+                    Orientation="Horizontal"
+                    VerticalAlignment="Center">
+                    <TextBlock
+                        Margin="0,0,8,0"
+                        VerticalAlignment="Center"
+                        FontSize="12"
+                        Opacity="0.85"
+                        Text="Show ADSK Plugins" />
+                    <ui:ToggleSwitch
+                        VerticalAlignment="Center"
+                        IsChecked="{Binding ShowAutodeskPlugins, Mode=TwoWay}"
+                        ToolTip="Show add-ins whose filename starts with 'Autodesk.' (off by default to focus on custom add-ins)." />
+                </StackPanel>
+            </Grid>
+
             <ScrollViewer
+                Grid.Row="1"
                 HorizontalScrollBarVisibility="Disabled"
                 VerticalScrollBarVisibility="Auto"
                 Background="Transparent">
-                <StackPanel>
-                    <TextBlock
-                        Margin="0,0,0,12"
-                        FontWeight="SemiBold"
-                        Text="Add-ins (per Revit version)" />
+                <StackPanel Margin="0,0,12,0">
                     <TextBlock
                         Margin="0,0,0,16"
                         Opacity="0.75"
-                        Text="No Revit add-in folders found under your roaming profile."
+                        Text="No Revit add-in folders found under your roaming profile or under ProgramData."
                         TextWrapping="Wrap">
                         <TextBlock.Style>
                             <Style TargetType="TextBlock">
@@ -100,14 +132,48 @@
                                                             <Grid.ColumnDefinitions>
                                                                 <ColumnDefinition Width="*" />
                                                                 <ColumnDefinition Width="Auto" />
+                                                                <ColumnDefinition Width="Auto" />
+                                                                <ColumnDefinition Width="Auto" />
                                                             </Grid.ColumnDefinitions>
                                                             <TextBlock
                                                                 Grid.Column="0"
                                                                 VerticalAlignment="Center"
                                                                 Text="{Binding DisplayFileName}"
                                                                 TextTrimming="CharacterEllipsis" />
-                                                            <ui:ToggleSwitch
+                                                            <Border
                                                                 Grid.Column="1"
+                                                                Margin="8,0,0,0"
+                                                                Padding="6,2"
+                                                                VerticalAlignment="Center"
+                                                                BorderBrush="{DynamicResource ControlStrokeColorDefaultBrush}"
+                                                                BorderThickness="1"
+                                                                CornerRadius="3">
+                                                                <Border.Style>
+                                                                    <Style TargetType="Border">
+                                                                        <Setter Property="Background" Value="{DynamicResource SystemAccentColorLight2Brush}" />
+                                                                        <Style.Triggers>
+                                                                            <DataTrigger Binding="{Binding Scope}" Value="MultiUser">
+                                                                                <Setter Property="Background" Value="{DynamicResource SystemFillColorCautionBackgroundBrush}" />
+                                                                            </DataTrigger>
+                                                                        </Style.Triggers>
+                                                                    </Style>
+                                                                </Border.Style>
+                                                                <TextBlock
+                                                                    FontSize="10"
+                                                                    FontWeight="SemiBold"
+                                                                    Text="{Binding ScopeLabel}" />
+                                                            </Border>
+                                                            <ui:SymbolIcon
+                                                                Grid.Column="2"
+                                                                Margin="6,0,0,0"
+                                                                VerticalAlignment="Center"
+                                                                FontSize="16"
+                                                                Foreground="{DynamicResource SystemFillColorCautionBrush}"
+                                                                Symbol="Warning24"
+                                                                ToolTip="{Binding CollisionTooltip}"
+                                                                Visibility="{Binding HasCollision, Converter={StaticResource BoolToVisibility}}" />
+                                                            <ui:ToggleSwitch
+                                                                Grid.Column="3"
                                                                 Margin="12,0,0,0"
                                                                 VerticalAlignment="Center"
                                                                 IsChecked="{Binding IsEnabled, Mode=TwoWay}" />
@@ -129,11 +195,19 @@
             Grid.Row="2"
             Padding="16,10"
             Background="{DynamicResource ControlFillColorDefaultBrush}">
-            <TextBlock
-                FontSize="12"
-                Opacity="0.85"
-                Text="Disabled manifests are moved to the .disabled folder under your Revit Addins path (no renaming). Restart Revit if an add-in stays loaded after you disable it."
-                TextWrapping="Wrap" />
+            <StackPanel>
+                <TextBlock
+                    FontSize="12"
+                    Opacity="0.85"
+                    Text="Single-User add-ins (in your roaming AppData) take priority over Multi-User add-ins (in ProgramData) when both have the same filename — Revit loads only the Single-User one."
+                    TextWrapping="Wrap" />
+                <TextBlock
+                    Margin="0,4,0,0"
+                    FontSize="12"
+                    Opacity="0.7"
+                    Text="Disabled manifests are moved to the .disabled folder under their Revit Addins root (no renaming). Restart Revit if an add-in stays loaded after you disable it."
+                    TextWrapping="Wrap" />
+            </StackPanel>
         </Border>
     </Grid>
 </ui:FluentWindow>

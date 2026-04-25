@@ -7,16 +7,20 @@ public sealed class AddinToggleService
 {
     private static readonly Regex YearFolder = new(@"^\d{4}$", RegexOptions.Compiled);
 
-    private readonly string _addinsRoot;
+    private readonly string _singleUserRoot;
+    private readonly string _multiUserRoot;
 
-    /// <param name="addinsRootOverride">For tests; default is roaming Autodesk Revit Addins folder (no username in path — uses <see cref="Environment.SpecialFolder.ApplicationData"/>).</param>
-    public AddinToggleService(string? addinsRootOverride = null)
+    /// <param name="singleUserRootOverride">For tests; default is roaming Autodesk Revit Addins folder.</param>
+    /// <param name="multiUserRootOverride">For tests; default is the ProgramData Autodesk Revit Addins folder.</param>
+    public AddinToggleService(string? singleUserRootOverride = null, string? multiUserRootOverride = null)
     {
-        _addinsRoot = Path.GetFullPath(addinsRootOverride ?? RevitAddinScanner.GetAddinsRootPath());
+        _singleUserRoot = Path.GetFullPath(singleUserRootOverride ?? RevitAddinScanner.GetSingleUserAddinsRootPath());
+        _multiUserRoot = Path.GetFullPath(multiUserRootOverride ?? RevitAddinScanner.GetMultiUserAddinsRootPath());
     }
 
     /// <summary>
-    /// Moves the manifest between <c>Addins\{year}\</c> and <c>Addins\.disabled\{year}\</c> (filename unchanged).
+    /// Moves the manifest between <c>{root}\{year}\</c> and <c>{root}\.disabled\{year}\</c> (filename unchanged).
+    /// The root (Single-User vs Multi-User) is inferred from <paramref name="currentPath"/>.
     /// </summary>
     /// <returns>New full path of the manifest file.</returns>
     public string SetEnabled(string currentPath, bool enable)
@@ -32,10 +36,14 @@ public sealed class AddinToggleService
         if (!fileName.EndsWith(".addin", StringComparison.OrdinalIgnoreCase))
             throw new InvalidOperationException("Not a recognized add-in manifest file.");
 
-        var disabledRoot = Path.GetFullPath(Path.Combine(_addinsRoot, RevitAddinScanner.DisabledFolderName));
+        var addinsRoot = ResolveRootForPath(fullPath)
+            ?? throw new InvalidOperationException(
+                "Manifest is not located under a known Single-User or Multi-User Revit Addins root.");
+
+        var disabledRoot = Path.GetFullPath(Path.Combine(addinsRoot, RevitAddinScanner.DisabledFolderName));
 
         var underDisabled = TryParseUnderDisabledRoot(fullPath, disabledRoot, fileName, out var versionDisabled);
-        var underEnabled = TryParseUnderAddinsYear(fullPath, fileName, out var versionEnabled);
+        var underEnabled = TryParseUnderAddinsYear(fullPath, addinsRoot, fileName, out var versionEnabled);
 
         if (enable)
         {
@@ -46,12 +54,19 @@ public sealed class AddinToggleService
                 throw new InvalidOperationException(
                     "Enable only applies to manifests under the .disabled folder for this Revit Addins root.");
 
-            var destDir = Path.GetFullPath(Path.Combine(_addinsRoot, versionDisabled!));
+            var destDir = Path.GetFullPath(Path.Combine(addinsRoot, versionDisabled!));
             var dest = Path.Combine(destDir, fileName);
-            if (File.Exists(dest))
-                throw new IOException($"Cannot enable: a file already exists: {dest}");
 
             Directory.CreateDirectory(destDir);
+            // If a stale enabled copy already lives at the destination, the file we're "enabling" is
+            // really just an orphaned disabled copy that the scanner already deduped against the live one.
+            // Keep the active copy intact and discard the stale disabled file.
+            if (File.Exists(dest))
+            {
+                File.Delete(fullPath);
+                return dest;
+            }
+
             File.Move(fullPath, dest);
             return dest;
         }
@@ -65,12 +80,30 @@ public sealed class AddinToggleService
 
         var disabledDir = Path.GetFullPath(Path.Combine(disabledRoot, versionEnabled!));
         var disabledPath = Path.Combine(disabledDir, fileName);
-        if (File.Exists(disabledPath))
-            throw new IOException($"Cannot disable: a file already exists: {disabledPath}");
 
         Directory.CreateDirectory(disabledDir);
+        // A stale .disabled copy can linger if the user disabled, then re-installed and disabled again.
+        // The live (enabled) file is the source of truth — overwrite the stale one.
+        if (File.Exists(disabledPath))
+            File.Delete(disabledPath);
+
         File.Move(fullPath, disabledPath);
         return disabledPath;
+    }
+
+    private string? ResolveRootForPath(string fullPath)
+    {
+        if (IsUnderRoot(fullPath, _singleUserRoot))
+            return _singleUserRoot;
+        if (IsUnderRoot(fullPath, _multiUserRoot))
+            return _multiUserRoot;
+        return null;
+    }
+
+    private static bool IsUnderRoot(string fullPath, string root)
+    {
+        var rel = Path.GetRelativePath(root, fullPath);
+        return !rel.StartsWith("..", StringComparison.Ordinal) && !Path.IsPathRooted(rel);
     }
 
     /// <summary>True if <paramref name="fullPath"/> is <c>disabledRoot\YYYY\fileName</c>.</summary>
@@ -96,13 +129,14 @@ public sealed class AddinToggleService
     }
 
     /// <summary>True if <paramref name="fullPath"/> is <c>addinsRoot\YYYY\fileName</c> (not under .disabled).</summary>
-    private bool TryParseUnderAddinsYear(
+    private static bool TryParseUnderAddinsYear(
         string fullPath,
+        string addinsRoot,
         string fileName,
         [System.Diagnostics.CodeAnalysis.NotNullWhen(true)] out string? version)
     {
         version = null;
-        var rel = Path.GetRelativePath(_addinsRoot, fullPath);
+        var rel = Path.GetRelativePath(addinsRoot, fullPath);
         if (rel.StartsWith("..", StringComparison.Ordinal) || Path.IsPathRooted(rel))
             return false;
 

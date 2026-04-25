@@ -14,6 +14,8 @@ public partial class AddinItemViewModel : ObservableObject
         _toggleService = toggleService;
         Version = model.Version;
         DisplayFileName = model.DisplayFileName;
+        Scope = model.Scope;
+        HasCollision = model.HasCollision;
         FullPath = model.FullPath;
         _isEnabled = model.IsEnabled;
     }
@@ -21,6 +23,17 @@ public partial class AddinItemViewModel : ObservableObject
     public string Version { get; }
 
     public string DisplayFileName { get; }
+
+    public AddinScope Scope { get; }
+
+    public string ScopeLabel => Scope == AddinScope.SingleUser ? "Single-User" : "Multi-User";
+
+    public bool HasCollision { get; }
+
+    public string CollisionTooltip =>
+        Scope == AddinScope.MultiUser
+            ? "A Single-User add-in with the same filename exists. Single-User has priority in Revit when both are enabled."
+            : "A Multi-User add-in with the same filename exists. Single-User has priority in Revit when both are enabled.";
 
     [ObservableProperty]
     private string _fullPath;
